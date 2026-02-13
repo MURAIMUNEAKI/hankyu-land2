@@ -1,12 +1,14 @@
 <!DOCTYPE html>
 <html lang="ja">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>阪急ランドオペレーター CSVコンバーター</title>
     <meta name="description" content="CSVのK列・L列をAIで要約し、M列・N列に出力するWebアプリケーション">
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&display=swap"
+        rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/encoding-japanese@2.2.0/encoding.min.js"></script>
     <style>
         :root {
@@ -134,7 +136,8 @@
             margin-bottom: 20px;
         }
 
-        .upload-area:hover, .upload-area.drag-over {
+        .upload-area:hover,
+        .upload-area.drag-over {
             background: rgba(255, 215, 0, 0.06);
             border-color: var(--gold);
             transform: translateY(-2px);
@@ -252,7 +255,8 @@
             color: var(--gold);
         }
 
-        .btn-download:disabled, .btn-json:disabled {
+        .btn-download:disabled,
+        .btn-json:disabled {
             opacity: 0.3;
             cursor: not-allowed;
             transform: none;
@@ -368,461 +372,490 @@
         }
     </style>
 </head>
+
 <body>
 
-<canvas id="particleCanvas"></canvas>
+    <canvas id="particleCanvas"></canvas>
 
-<div class="app-container">
-    <header class="header">
-        <h1>阪急ランドオペレーター</h1>
-        <p class="subtitle">（CSV）K列→M列、L列→N列に要約抽出するコンバーター</p>
-    </header>
+    <div class="app-container">
+        <header class="header">
+            <h1>阪急ランドオペレーター</h1>
+            <p class="subtitle">（CSV）K列→M列、L列→N列に要約抽出するコンバーター</p>
+        </header>
 
-    <div class="main-grid">
-        <!-- Left: Upload -->
-        <div class="card" id="uploadCard">
-            <div class="card-title"><span class="icon">📤</span> CSVをアップロード</div>
+        <div class="main-grid">
+            <!-- Left: Upload -->
+            <div class="card" id="uploadCard">
+                <div class="card-title"><span class="icon">📤</span> CSVをアップロード</div>
 
-            <div class="upload-area" id="uploadArea" onclick="document.getElementById('fileInput').click()">
-                <span class="upload-icon">⬆️</span>
-                <div class="upload-text">ここをクリックしてファイルを選択</div>
-                <div class="upload-hint">または、ファイルをドラッグ＆ドロップ</div>
-            </div>
-            <input type="file" id="fileInput" accept=".csv" hidden>
-
-            <div class="file-info" id="fileInfo">
-                <span>📄</span>
-                <span class="file-name" id="fileName"></span>
-                <span class="file-remove" id="fileRemove" onclick="removeFile()">✕</span>
-            </div>
-
-            <button class="btn btn-primary" id="convertBtn" onclick="startConversion()" disabled>
-                <span>⚡</span> データを変換
-            </button>
-
-            <div class="progress-container" id="progressContainer">
-                <div class="progress-bar-track">
-                    <div class="progress-bar-fill" id="progressBarFill"></div>
+                <div class="upload-area" id="uploadArea" onclick="document.getElementById('fileInput').click()">
+                    <span class="upload-icon">⬆️</span>
+                    <div class="upload-text">ここをクリックしてファイルを選択</div>
+                    <div class="upload-hint">または、ファイルをドラッグ＆ドロップ</div>
                 </div>
-                <div class="progress-text" id="progressText">準備中...</div>
+                <input type="file" id="fileInput" accept=".csv" hidden>
+
+                <div class="file-info" id="fileInfo">
+                    <span>📄</span>
+                    <span class="file-name" id="fileName"></span>
+                    <span class="file-remove" id="fileRemove" onclick="removeFile()">✕</span>
+                </div>
+
+                <button class="btn btn-primary" id="convertBtn" onclick="startConversion()" disabled>
+                    <span>⚡</span> データを変換
+                </button>
+
+                <div class="progress-container" id="progressContainer">
+                    <div class="progress-bar-track">
+                        <div class="progress-bar-fill" id="progressBarFill"></div>
+                    </div>
+                    <div class="progress-text" id="progressText">準備中...</div>
+                </div>
+
+                <div class="error-msg" id="errorMsg"></div>
             </div>
 
-            <div class="error-msg" id="errorMsg"></div>
-        </div>
+            <!-- Right: Output -->
+            <div class="card" id="outputCard">
+                <div class="card-title"><span class="icon">📋</span> 出力画面</div>
 
-        <!-- Right: Output -->
-        <div class="card" id="outputCard">
-            <div class="card-title"><span class="icon">📋</span> 出力画面</div>
+                <div class="output-area" id="outputArea">変換されたCSVデータがここに表示されます</div>
 
-            <div class="output-area" id="outputArea">変換されたCSVデータがここに表示されます</div>
+                <button class="btn btn-download" id="csvDownloadBtn" onclick="downloadCSV()" disabled>
+                    <span>📥</span> 再度、CSVで出力
+                </button>
 
-            <button class="btn btn-download" id="csvDownloadBtn" onclick="downloadCSV()" disabled>
-                <span>📥</span> 再度、CSVで出力
-            </button>
-
-            <button class="btn btn-json" id="jsonDownloadBtn" onclick="downloadJSON()" disabled>
-                <span>📥</span> 阪急JSON形式で出力
-            </button>
+                <button class="btn btn-json" id="jsonDownloadBtn" onclick="downloadJSON()" disabled>
+                    <span>📥</span> 阪急JSON形式で出力
+                </button>
+            </div>
         </div>
     </div>
-</div>
 
-<script>
-// ===== Particle Canvas =====
-(function() {
-    const canvas = document.getElementById('particleCanvas');
-    const ctx = canvas.getContext('2d');
-    let particles = [];
-    const PARTICLE_COUNT = 60;
+    <script>
+        // ===== Particle Canvas =====
+        (function () {
+            const canvas = document.getElementById('particleCanvas');
+            const ctx = canvas.getContext('2d');
+            let particles = [];
+            const PARTICLE_COUNT = 60;
 
-    function resize() {
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
-    }
-    window.addEventListener('resize', resize);
-    resize();
+            function resize() {
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+            }
+            window.addEventListener('resize', resize);
+            resize();
 
-    function createParticle() {
-        return {
-            x: Math.random() * canvas.width,
-            y: Math.random() * canvas.height,
-            vx: (Math.random() - 0.5) * 0.4,
-            vy: (Math.random() - 0.5) * 0.4,
-            size: Math.random() * 2 + 0.5,
-            alpha: Math.random() * 0.4 + 0.1
-        };
-    }
+            function createParticle() {
+                return {
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * canvas.height,
+                    vx: (Math.random() - 0.5) * 0.4,
+                    vy: (Math.random() - 0.5) * 0.4,
+                    size: Math.random() * 2 + 0.5,
+                    alpha: Math.random() * 0.4 + 0.1
+                };
+            }
 
-    for (let i = 0; i < PARTICLE_COUNT; i++) particles.push(createParticle());
+            for (let i = 0; i < PARTICLE_COUNT; i++) particles.push(createParticle());
 
-    function animate() {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
+            function animate() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-        for (let i = 0; i < particles.length; i++) {
-            const p = particles[i];
-            p.x += p.vx;
-            p.y += p.vy;
+                for (let i = 0; i < particles.length; i++) {
+                    const p = particles[i];
+                    p.x += p.vx;
+                    p.y += p.vy;
 
-            if (p.x < 0 || p.x > canvas.width) p.vx *= -1;
-            if (p.y < 0 || p.y > canvas.height) p.vy *= -1;
+                    if (p.x < 0 || p.x > canvas.width) p.vx *= -1;
+                    if (p.y < 0 || p.y > canvas.height) p.vy *= -1;
 
-            ctx.beginPath();
-            ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-            ctx.fillStyle = `rgba(255, 215, 0, ${p.alpha})`;
-            ctx.fill();
-
-            // Draw connection lines
-            for (let j = i + 1; j < particles.length; j++) {
-                const p2 = particles[j];
-                const dx = p.x - p2.x;
-                const dy = p.y - p2.y;
-                const dist = Math.sqrt(dx * dx + dy * dy);
-                if (dist < 150) {
                     ctx.beginPath();
-                    ctx.moveTo(p.x, p.y);
-                    ctx.lineTo(p2.x, p2.y);
-                    ctx.strokeStyle = `rgba(255, 215, 0, ${0.06 * (1 - dist / 150)})`;
-                    ctx.lineWidth = 0.5;
-                    ctx.stroke();
+                    ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                    ctx.fillStyle = `rgba(255, 215, 0, ${p.alpha})`;
+                    ctx.fill();
+
+                    // Draw connection lines
+                    for (let j = i + 1; j < particles.length; j++) {
+                        const p2 = particles[j];
+                        const dx = p.x - p2.x;
+                        const dy = p.y - p2.y;
+                        const dist = Math.sqrt(dx * dx + dy * dy);
+                        if (dist < 150) {
+                            ctx.beginPath();
+                            ctx.moveTo(p.x, p.y);
+                            ctx.lineTo(p2.x, p2.y);
+                            ctx.strokeStyle = `rgba(255, 215, 0, ${0.06 * (1 - dist / 150)})`;
+                            ctx.lineWidth = 0.5;
+                            ctx.stroke();
+                        }
+                    }
+                }
+                requestAnimationFrame(animate);
+            }
+            animate();
+        })();
+
+        // ===== App State =====
+        let csvData = null;       // Parsed CSV rows (arrays)
+        let convertedData = null; // After conversion
+
+        const fileInput = document.getElementById('fileInput');
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInfo = document.getElementById('fileInfo');
+        const fileName = document.getElementById('fileName');
+        const convertBtn = document.getElementById('convertBtn');
+        const progressContainer = document.getElementById('progressContainer');
+        const progressBarFill = document.getElementById('progressBarFill');
+        const progressText = document.getElementById('progressText');
+        const outputArea = document.getElementById('outputArea');
+        const csvDownloadBtn = document.getElementById('csvDownloadBtn');
+        const jsonDownloadBtn = document.getElementById('jsonDownloadBtn');
+        const errorMsg = document.getElementById('errorMsg');
+
+        // ===== Drag & Drop =====
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('drag-over');
+        });
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('drag-over');
+        });
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('drag-over');
+            if (e.dataTransfer.files.length > 0) {
+                handleFile(e.dataTransfer.files[0]);
+            }
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                handleFile(e.target.files[0]);
+            }
+        });
+
+        function handleFile(file) {
+            if (!file.name.endsWith('.csv')) {
+                showError('CSVファイルを選択してください。');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                try {
+                    const uint8Array = new Uint8Array(e.target.result);
+                    // Detect encoding - try SJIS first since input is known to be Shift-JIS
+                    let detectedEncoding = Encoding.detect(uint8Array);
+                    console.log('Detected encoding:', detectedEncoding);
+
+                    // If detection returns ASCII or fails, force SJIS (most common for Japanese CSV)
+                    if (!detectedEncoding || detectedEncoding === 'ASCII' || detectedEncoding === 'BINARY') {
+                        detectedEncoding = 'SJIS';
+                    }
+
+                    let unicodeString;
+                    try {
+                        // First try with detected encoding
+                        unicodeString = Encoding.convert(uint8Array, {
+                            to: 'UNICODE',
+                            from: detectedEncoding,
+                            type: 'string'
+                        });
+
+                        // Verify: if result still looks garbled (lots of replacement chars), retry with SJIS
+                        if (detectedEncoding !== 'SJIS' && unicodeString.includes('\ufffd')) {
+                            unicodeString = Encoding.convert(uint8Array, {
+                                to: 'UNICODE',
+                                from: 'SJIS',
+                                type: 'string'
+                            });
+                        }
+                    } catch (convErr) {
+                        // Fallback: force SJIS
+                        unicodeString = Encoding.convert(uint8Array, {
+                            to: 'UNICODE',
+                            from: 'SJIS',
+                            type: 'string'
+                        });
+                    }
+
+                    csvData = parseCSV(unicodeString);
+
+                    fileName.textContent = `${file.name} (${csvData.length}行)`;
+                    fileInfo.classList.add('visible');
+                    uploadArea.style.display = 'none';
+                    convertBtn.disabled = false;
+                    hideError();
+                } catch (err) {
+                    showError('CSVファイルの読み込みに失敗しました: ' + err.message);
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        function removeFile() {
+            csvData = null;
+            convertedData = null;
+            fileInput.value = '';
+            fileInfo.classList.remove('visible');
+            uploadArea.style.display = '';
+            convertBtn.disabled = true;
+            csvDownloadBtn.disabled = true;
+            jsonDownloadBtn.disabled = true;
+            outputArea.textContent = '変換されたCSVデータがここに表示されます';
+            outputArea.classList.remove('has-data');
+            progressContainer.classList.remove('visible');
+            hideError();
+        }
+
+        // ===== CSV Parser (handles quoted fields) =====
+        function parseCSV(text) {
+            const rows = [];
+            let current = '';
+            let inQuotes = false;
+            const row = [];
+
+            for (let i = 0; i < text.length; i++) {
+                const ch = text[i];
+                const next = text[i + 1];
+
+                if (inQuotes) {
+                    if (ch === '"' && next === '"') {
+                        current += '"';
+                        i++;
+                    } else if (ch === '"') {
+                        inQuotes = false;
+                    } else {
+                        current += ch;
+                    }
+                } else {
+                    if (ch === '"') {
+                        inQuotes = true;
+                    } else if (ch === ',') {
+                        row.push(current);
+                        current = '';
+                    } else if (ch === '\r' && next === '\n') {
+                        row.push(current);
+                        current = '';
+                        rows.push([...row]);
+                        row.length = 0;
+                        i++;
+                    } else if (ch === '\n') {
+                        row.push(current);
+                        current = '';
+                        rows.push([...row]);
+                        row.length = 0;
+                    } else {
+                        current += ch;
+                    }
                 }
             }
+            // Last row
+            if (current || row.length > 0) {
+                row.push(current);
+                rows.push([...row]);
+            }
+
+            return rows;
         }
-        requestAnimationFrame(animate);
-    }
-    animate();
-})();
 
-// ===== App State =====
-let csvData = null;       // Parsed CSV rows (arrays)
-let convertedData = null; // After conversion
+        // ===== Conversion =====
+        async function startConversion() {
+            if (!csvData || csvData.length < 2) {
+                showError('有効なCSVデータがありません（ヘッダー行 + データ行が必要です）。');
+                return;
+            }
 
-const fileInput = document.getElementById('fileInput');
-const uploadArea = document.getElementById('uploadArea');
-const fileInfo = document.getElementById('fileInfo');
-const fileName = document.getElementById('fileName');
-const convertBtn = document.getElementById('convertBtn');
-const progressContainer = document.getElementById('progressContainer');
-const progressBarFill = document.getElementById('progressBarFill');
-const progressText = document.getElementById('progressText');
-const outputArea = document.getElementById('outputArea');
-const csvDownloadBtn = document.getElementById('csvDownloadBtn');
-const jsonDownloadBtn = document.getElementById('jsonDownloadBtn');
-const errorMsg = document.getElementById('errorMsg');
-
-// ===== Drag & Drop =====
-uploadArea.addEventListener('dragover', (e) => {
-    e.preventDefault();
-    uploadArea.classList.add('drag-over');
-});
-uploadArea.addEventListener('dragleave', () => {
-    uploadArea.classList.remove('drag-over');
-});
-uploadArea.addEventListener('drop', (e) => {
-    e.preventDefault();
-    uploadArea.classList.remove('drag-over');
-    if (e.dataTransfer.files.length > 0) {
-        handleFile(e.dataTransfer.files[0]);
-    }
-});
-
-fileInput.addEventListener('change', (e) => {
-    if (e.target.files.length > 0) {
-        handleFile(e.target.files[0]);
-    }
-});
-
-function handleFile(file) {
-    if (!file.name.endsWith('.csv')) {
-        showError('CSVファイルを選択してください。');
-        return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = function(e) {
-        try {
-            const uint8Array = new Uint8Array(e.target.result);
-            // Detect encoding and convert to Unicode
-            const detectedEncoding = Encoding.detect(uint8Array);
-            const unicodeArray = Encoding.convert(uint8Array, {
-                to: 'UNICODE',
-                from: detectedEncoding,
-                type: 'string'
-            });
-
-            csvData = parseCSV(unicodeArray);
-
-            fileName.textContent = `${file.name} (${csvData.length}行)`;
-            fileInfo.classList.add('visible');
-            uploadArea.style.display = 'none';
-            convertBtn.disabled = false;
             hideError();
-        } catch (err) {
-            showError('CSVファイルの読み込みに失敗しました: ' + err.message);
-        }
-    };
-    reader.readAsArrayBuffer(file);
-}
+            convertBtn.disabled = true;
+            csvDownloadBtn.disabled = true;
+            jsonDownloadBtn.disabled = true;
+            progressContainer.classList.add('visible');
 
-function removeFile() {
-    csvData = null;
-    convertedData = null;
-    fileInput.value = '';
-    fileInfo.classList.remove('visible');
-    uploadArea.style.display = '';
-    convertBtn.disabled = true;
-    csvDownloadBtn.disabled = true;
-    jsonDownloadBtn.disabled = true;
-    outputArea.textContent = '変換されたCSVデータがここに表示されます';
-    outputArea.classList.remove('has-data');
-    progressContainer.classList.remove('visible');
-    hideError();
-}
+            // Deep copy the data
+            convertedData = csvData.map(row => [...row]);
 
-// ===== CSV Parser (handles quoted fields) =====
-function parseCSV(text) {
-    const rows = [];
-    let current = '';
-    let inQuotes = false;
-    const row = [];
+            // Add M and N headers (index 12, 13) to the header row
+            const header = convertedData[0];
+            while (header.length < 13) header.push('');
+            if (header.length < 14) header.push('');
+            header[12] = 'AI要約済_確認手配事項内容';
+            header[13] = 'AI要約済_後方メモ';
 
-    for (let i = 0; i < text.length; i++) {
-        const ch = text[i];
-        const next = text[i + 1];
-
-        if (inQuotes) {
-            if (ch === '"' && next === '"') {
-                current += '"';
-                i++;
-            } else if (ch === '"') {
-                inQuotes = false;
-            } else {
-                current += ch;
+            // Collect data rows with K and L columns (index 10, 11)
+            const dataRows = [];
+            for (let i = 1; i < convertedData.length; i++) {
+                const row = convertedData[i];
+                while (row.length < 14) row.push('');
+                const colK = (row[10] || '').trim();
+                const colL = (row[11] || '').trim();
+                if (colK || colL) {
+                    dataRows.push({ rowIndex: i, colK, colL });
+                }
             }
-        } else {
-            if (ch === '"') {
-                inQuotes = true;
-            } else if (ch === ',') {
-                row.push(current);
-                current = '';
-            } else if (ch === '\r' && next === '\n') {
-                row.push(current);
-                current = '';
-                rows.push([...row]);
-                row.length = 0;
-                i++;
-            } else if (ch === '\n') {
-                row.push(current);
-                current = '';
-                rows.push([...row]);
-                row.length = 0;
-            } else {
-                current += ch;
+
+            const totalRows = dataRows.length;
+            if (totalRows === 0) {
+                showError('K列・L列にデータがありません。');
+                convertBtn.disabled = false;
+                progressContainer.classList.remove('visible');
+                return;
             }
+
+            let processedCount = 0;
+            updateProgress(processedCount, totalRows);
+
+            // Process in batches of 5
+            const BATCH_SIZE = 5;
+            for (let batchStart = 0; batchStart < dataRows.length; batchStart += BATCH_SIZE) {
+                const batch = dataRows.slice(batchStart, batchStart + BATCH_SIZE);
+
+                try {
+                    const response = await fetch('convert.php', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            texts: batch.map(item => ({
+                                index: item.rowIndex,
+                                colK: item.colK,
+                                colL: item.colL
+                            }))
+                        })
+                    });
+
+                    if (!response.ok) {
+                        const errData = await response.json().catch(() => ({}));
+                        throw new Error(errData.error || `HTTP ${response.status}`);
+                    }
+
+                    const result = await response.json();
+
+                    for (const r of result.results) {
+                        convertedData[r.index][12] = r.summaryK || '';
+                        convertedData[r.index][13] = r.summaryL || '';
+                    }
+
+                    processedCount += batch.length;
+                    updateProgress(processedCount, totalRows);
+
+                } catch (err) {
+                    showError(`バッチ処理エラー: ${err.message}`);
+                    // Continue with next batch instead of stopping
+                    processedCount += batch.length;
+                    updateProgress(processedCount, totalRows);
+                }
+            }
+
+            // Show results
+            displayOutput();
+            convertBtn.disabled = false;
+            csvDownloadBtn.disabled = false;
+            jsonDownloadBtn.disabled = false;
+
+            progressText.textContent = `✅ 完了 - ${totalRows}行中${totalRows}行処理完了 - 100%`;
         }
-    }
-    // Last row
-    if (current || row.length > 0) {
-        row.push(current);
-        rows.push([...row]);
-    }
 
-    return rows;
-}
-
-// ===== Conversion =====
-async function startConversion() {
-    if (!csvData || csvData.length < 2) {
-        showError('有効なCSVデータがありません（ヘッダー行 + データ行が必要です）。');
-        return;
-    }
-
-    hideError();
-    convertBtn.disabled = true;
-    csvDownloadBtn.disabled = true;
-    jsonDownloadBtn.disabled = true;
-    progressContainer.classList.add('visible');
-
-    // Deep copy the data
-    convertedData = csvData.map(row => [...row]);
-
-    // Add M and N headers (index 12, 13) to the header row
-    const header = convertedData[0];
-    while (header.length < 13) header.push('');
-    if (header.length < 14) header.push('');
-    header[12] = 'AI要約済_確認手配事項内容';
-    header[13] = 'AI要約済_後方メモ';
-
-    // Collect data rows with K and L columns (index 10, 11)
-    const dataRows = [];
-    for (let i = 1; i < convertedData.length; i++) {
-        const row = convertedData[i];
-        while (row.length < 14) row.push('');
-        const colK = (row[10] || '').trim();
-        const colL = (row[11] || '').trim();
-        if (colK || colL) {
-            dataRows.push({ rowIndex: i, colK, colL });
+        function updateProgress(processed, total) {
+            const percent = Math.round((processed / total) * 100);
+            progressBarFill.style.width = percent + '%';
+            progressText.textContent = `${total}行中${processed}行処理完了 - ${percent}%`;
         }
-    }
 
-    const totalRows = dataRows.length;
-    if (totalRows === 0) {
-        showError('K列・L列にデータがありません。');
-        convertBtn.disabled = false;
-        progressContainer.classList.remove('visible');
-        return;
-    }
+        function displayOutput() {
+            if (!convertedData) return;
 
-    let processedCount = 0;
-    updateProgress(processedCount, totalRows);
+            const csvText = convertedData.map(row =>
+                row.map(cell => {
+                    const s = String(cell);
+                    if (s.includes(',') || s.includes('"') || s.includes('\n')) {
+                        return '"' + s.replace(/"/g, '""') + '"';
+                    }
+                    return s;
+                }).join(',')
+            ).join('\n');
 
-    // Process in batches of 5
-    const BATCH_SIZE = 5;
-    for (let batchStart = 0; batchStart < dataRows.length; batchStart += BATCH_SIZE) {
-        const batch = dataRows.slice(batchStart, batchStart + BATCH_SIZE);
+            outputArea.textContent = csvText;
+            outputArea.classList.add('has-data');
+        }
 
-        try {
-            const response = await fetch('convert.php', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    texts: batch.map(item => ({
-                        index: item.rowIndex,
-                        colK: item.colK,
-                        colL: item.colL
-                    }))
-                })
+        // ===== Downloads =====
+        function downloadCSV() {
+            if (!convertedData) return;
+
+            const csvText = convertedData.map(row =>
+                row.map(cell => {
+                    const s = String(cell);
+                    if (s.includes(',') || s.includes('"') || s.includes('\n')) {
+                        return '"' + s.replace(/"/g, '""') + '"';
+                    }
+                    return s;
+                }).join(',')
+            ).join('\r\n');
+
+            // Convert to Shift-JIS
+            const unicodeArray = Encoding.stringToCode(csvText);
+            const sjisArray = Encoding.convert(unicodeArray, {
+                to: 'SJIS',
+                from: 'UNICODE'
             });
+            const uint8Array = new Uint8Array(sjisArray);
+            const blob = new Blob([uint8Array], { type: 'text/csv;charset=shift_jis' });
 
-            if (!response.ok) {
-                const errData = await response.json().catch(() => ({}));
-                throw new Error(errData.error || `HTTP ${response.status}`);
-            }
-
-            const result = await response.json();
-
-            for (const r of result.results) {
-                convertedData[r.index][12] = r.summaryK || '';
-                convertedData[r.index][13] = r.summaryL || '';
-            }
-
-            processedCount += batch.length;
-            updateProgress(processedCount, totalRows);
-
-        } catch (err) {
-            showError(`バッチ処理エラー: ${err.message}`);
-            // Continue with next batch instead of stopping
-            processedCount += batch.length;
-            updateProgress(processedCount, totalRows);
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'converted_' + new Date().toISOString().slice(0, 10) + '.csv';
+            a.click();
+            URL.revokeObjectURL(url);
         }
-    }
 
-    // Show results
-    displayOutput();
-    convertBtn.disabled = false;
-    csvDownloadBtn.disabled = false;
-    jsonDownloadBtn.disabled = false;
+        function downloadJSON() {
+            if (!convertedData || convertedData.length < 2) return;
 
-    progressText.textContent = `✅ 完了 - ${totalRows}行中${totalRows}行処理完了 - 100%`;
-}
+            const header = convertedData[0];
+            // Find column indices
+            const colInquiry = 0; // A列: 問合せ番号 (仮定)
+            const colK = 10;  // K列: 確認手配事項内容
+            const colL = 11;  // L列: 後方メモ
+            const colM = 12;  // M列: AI要約済_確認手配事項内容
+            const colN = 13;  // N列: AI要約済_後方メモ
 
-function updateProgress(processed, total) {
-    const percent = Math.round((processed / total) * 100);
-    progressBarFill.style.width = percent + '%';
-    progressText.textContent = `${total}行中${processed}行処理完了 - ${percent}%`;
-}
-
-function displayOutput() {
-    if (!convertedData) return;
-
-    const csvText = convertedData.map(row =>
-        row.map(cell => {
-            const s = String(cell);
-            if (s.includes(',') || s.includes('"') || s.includes('\n')) {
-                return '"' + s.replace(/"/g, '""') + '"';
+            const courses = [];
+            for (let i = 1; i < convertedData.length; i++) {
+                const row = convertedData[i];
+                courses.push({
+                    "問合せ番号": row[colInquiry] || '',
+                    "確認手配事項内容": row[colK] || '',
+                    "後方メモ": row[colL] || '',
+                    "AI要約済_確認手配事項内容": row[colM] || '',
+                    "AI要約済_後方メモ": row[colN] || ''
+                });
             }
-            return s;
-        }).join(',')
-    ).join('\n');
 
-    outputArea.textContent = csvText;
-    outputArea.classList.add('has-data');
-}
+            const jsonData = JSON.stringify({ courses }, null, 2);
+            const blob = new Blob([jsonData], { type: 'application/json;charset=utf-8' });
 
-// ===== Downloads =====
-function downloadCSV() {
-    if (!convertedData) return;
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'hankyu_courses_' + new Date().toISOString().slice(0, 10) + '.json';
+            a.click();
+            URL.revokeObjectURL(url);
+        }
 
-    const csvText = convertedData.map(row =>
-        row.map(cell => {
-            const s = String(cell);
-            if (s.includes(',') || s.includes('"') || s.includes('\n')) {
-                return '"' + s.replace(/"/g, '""') + '"';
-            }
-            return s;
-        }).join(',')
-    ).join('\r\n');
+        // ===== Error Handling =====
+        function showError(msg) {
+            errorMsg.textContent = msg;
+            errorMsg.classList.add('visible');
+        }
 
-    // Convert to Shift-JIS
-    const unicodeArray = Encoding.stringToCode(csvText);
-    const sjisArray = Encoding.convert(unicodeArray, {
-        to: 'SJIS',
-        from: 'UNICODE'
-    });
-    const uint8Array = new Uint8Array(sjisArray);
-    const blob = new Blob([uint8Array], { type: 'text/csv;charset=shift_jis' });
-
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'converted_' + new Date().toISOString().slice(0, 10) + '.csv';
-    a.click();
-    URL.revokeObjectURL(url);
-}
-
-function downloadJSON() {
-    if (!convertedData || convertedData.length < 2) return;
-
-    const header = convertedData[0];
-    // Find column indices
-    const colInquiry = 0; // A列: 問合せ番号 (仮定)
-    const colK = 10;  // K列: 確認手配事項内容
-    const colL = 11;  // L列: 後方メモ
-    const colM = 12;  // M列: AI要約済_確認手配事項内容
-    const colN = 13;  // N列: AI要約済_後方メモ
-
-    const courses = [];
-    for (let i = 1; i < convertedData.length; i++) {
-        const row = convertedData[i];
-        courses.push({
-            "問合せ番号": row[colInquiry] || '',
-            "確認手配事項内容": row[colK] || '',
-            "後方メモ": row[colL] || '',
-            "AI要約済_確認手配事項内容": row[colM] || '',
-            "AI要約済_後方メモ": row[colN] || ''
-        });
-    }
-
-    const jsonData = JSON.stringify({ courses }, null, 2);
-    const blob = new Blob([jsonData], { type: 'application/json;charset=utf-8' });
-
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'hankyu_courses_' + new Date().toISOString().slice(0, 10) + '.json';
-    a.click();
-    URL.revokeObjectURL(url);
-}
-
-// ===== Error Handling =====
-function showError(msg) {
-    errorMsg.textContent = msg;
-    errorMsg.classList.add('visible');
-}
-
-function hideError() {
-    errorMsg.classList.remove('visible');
-}
-</script>
+        function hideError() {
+            errorMsg.classList.remove('visible');
+        }
+    </script>
 
 </body>
+
 </html>
