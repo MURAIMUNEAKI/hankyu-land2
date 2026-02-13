@@ -1,0 +1,828 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>阪急ランドオペレーター CSVコンバーター</title>
+    <meta name="description" content="CSVのK列・L列をAIで要約し、M列・N列に出力するWebアプリケーション">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/encoding-japanese@2.2.0/encoding.min.js"></script>
+    <style>
+        :root {
+            --bg-primary: #0a0a14;
+            --bg-card: rgba(18, 18, 32, 0.95);
+            --bg-card-hover: rgba(25, 25, 45, 0.98);
+            --border-subtle: rgba(255, 215, 0, 0.15);
+            --border-gold: rgba(255, 215, 0, 0.4);
+            --gold: #ffd700;
+            --gold-light: #ffe566;
+            --gold-dim: rgba(255, 215, 0, 0.6);
+            --text-primary: #e8e8f0;
+            --text-secondary: rgba(232, 232, 240, 0.6);
+            --accent-blue: #4a90d9;
+            --accent-green: #4caf50;
+            --accent-red: #e74c3c;
+            --radius: 16px;
+            --radius-sm: 10px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Noto Sans JP', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Particle canvas */
+        #particleCanvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        .app-container {
+            position: relative;
+            z-index: 1;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 30px 24px;
+        }
+
+        /* Header */
+        .header {
+            text-align: center;
+            margin-bottom: 36px;
+        }
+
+        .header h1 {
+            font-size: 2rem;
+            font-weight: 900;
+            background: linear-gradient(135deg, var(--gold), var(--gold-light), var(--gold));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            letter-spacing: 2px;
+            margin-bottom: 8px;
+            text-shadow: 0 0 30px rgba(255, 215, 0, 0.3);
+        }
+
+        .header .subtitle {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+            font-weight: 400;
+        }
+
+        /* Main layout */
+        .main-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 28px;
+            align-items: start;
+        }
+
+        /* Card */
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius);
+            padding: 28px;
+            backdrop-filter: blur(12px);
+            transition: border-color 0.3s ease;
+        }
+
+        .card:hover {
+            border-color: var(--border-gold);
+        }
+
+        .card-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--gold);
+            margin-bottom: 20px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid var(--border-subtle);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .card-title .icon {
+            font-size: 1.2rem;
+        }
+
+        /* Upload area */
+        .upload-area {
+            border: 2px dashed var(--border-gold);
+            border-radius: var(--radius-sm);
+            padding: 48px 24px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: rgba(255, 215, 0, 0.02);
+            margin-bottom: 20px;
+        }
+
+        .upload-area:hover, .upload-area.drag-over {
+            background: rgba(255, 215, 0, 0.06);
+            border-color: var(--gold);
+            transform: translateY(-2px);
+        }
+
+        .upload-area .upload-icon {
+            font-size: 2.5rem;
+            margin-bottom: 12px;
+            display: block;
+        }
+
+        .upload-area .upload-text {
+            font-size: 0.95rem;
+            color: var(--text-primary);
+            font-weight: 500;
+        }
+
+        .upload-area .upload-hint {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin-top: 6px;
+        }
+
+        .file-info {
+            display: none;
+            background: rgba(255, 215, 0, 0.08);
+            border: 1px solid var(--border-gold);
+            border-radius: var(--radius-sm);
+            padding: 14px 18px;
+            margin-bottom: 20px;
+            font-size: 0.9rem;
+            color: var(--gold-light);
+            align-items: center;
+            gap: 10px;
+        }
+
+        .file-info.visible {
+            display: flex;
+        }
+
+        .file-info .file-name {
+            flex: 1;
+            font-weight: 500;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .file-info .file-remove {
+            cursor: pointer;
+            color: var(--accent-red);
+            font-size: 1.1rem;
+            opacity: 0.7;
+            transition: opacity 0.2s;
+        }
+
+        .file-info .file-remove:hover {
+            opacity: 1;
+        }
+
+        /* Buttons */
+        .btn {
+            width: 100%;
+            padding: 14px 24px;
+            border: none;
+            border-radius: var(--radius-sm);
+            font-family: inherit;
+            font-size: 0.95rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--gold), #e6c300);
+            color: #0a0a14;
+            box-shadow: 0 4px 20px rgba(255, 215, 0, 0.25);
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 28px rgba(255, 215, 0, 0.4);
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-download {
+            background: linear-gradient(135deg, var(--accent-blue), #3a7bc8);
+            color: #fff;
+            box-shadow: 0 4px 16px rgba(74, 144, 217, 0.2);
+            margin-bottom: 10px;
+        }
+
+        .btn-download:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 24px rgba(74, 144, 217, 0.35);
+        }
+
+        .btn-json {
+            background: transparent;
+            border: 1px solid var(--border-gold);
+            color: var(--gold-dim);
+        }
+
+        .btn-json:hover:not(:disabled) {
+            background: rgba(255, 215, 0, 0.06);
+            color: var(--gold);
+        }
+
+        .btn-download:disabled, .btn-json:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* Progress */
+        .progress-container {
+            display: none;
+            margin-top: 20px;
+        }
+
+        .progress-container.visible {
+            display: block;
+        }
+
+        .progress-bar-track {
+            width: 100%;
+            height: 8px;
+            background: rgba(255, 215, 0, 0.1);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 10px;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--gold), var(--gold-light));
+            border-radius: 4px;
+            width: 0%;
+            transition: width 0.4s ease;
+        }
+
+        .progress-text {
+            text-align: center;
+            font-size: 0.85rem;
+            color: var(--gold-dim);
+            font-weight: 500;
+        }
+
+        /* Output area */
+        .output-area {
+            width: 100%;
+            min-height: 260px;
+            max-height: 400px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-sm);
+            padding: 16px;
+            font-family: 'Consolas', 'Courier New', monospace;
+            font-size: 0.82rem;
+            color: var(--text-secondary);
+            overflow-y: auto;
+            line-height: 1.6;
+            resize: vertical;
+            margin-bottom: 20px;
+        }
+
+        .output-area.has-data {
+            color: var(--text-primary);
+        }
+
+        /* Scrollbar */
+        .output-area::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .output-area::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .output-area::-webkit-scrollbar-thumb {
+            background: rgba(255, 215, 0, 0.2);
+            border-radius: 3px;
+        }
+
+        /* Error message */
+        .error-msg {
+            display: none;
+            background: rgba(231, 76, 60, 0.12);
+            border: 1px solid rgba(231, 76, 60, 0.3);
+            border-radius: var(--radius-sm);
+            padding: 12px 16px;
+            margin-top: 12px;
+            font-size: 0.85rem;
+            color: #e74c3c;
+        }
+
+        .error-msg.visible {
+            display: block;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .main-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .header h1 {
+                font-size: 1.5rem;
+            }
+
+            .app-container {
+                padding: 20px 16px;
+            }
+
+            .card {
+                padding: 20px;
+            }
+
+            .upload-area {
+                padding: 32px 16px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<canvas id="particleCanvas"></canvas>
+
+<div class="app-container">
+    <header class="header">
+        <h1>阪急ランドオペレーター</h1>
+        <p class="subtitle">（CSV）K列→M列、L列→N列に要約抽出するコンバーター</p>
+    </header>
+
+    <div class="main-grid">
+        <!-- Left: Upload -->
+        <div class="card" id="uploadCard">
+            <div class="card-title"><span class="icon">📤</span> CSVをアップロード</div>
+
+            <div class="upload-area" id="uploadArea" onclick="document.getElementById('fileInput').click()">
+                <span class="upload-icon">⬆️</span>
+                <div class="upload-text">ここをクリックしてファイルを選択</div>
+                <div class="upload-hint">または、ファイルをドラッグ＆ドロップ</div>
+            </div>
+            <input type="file" id="fileInput" accept=".csv" hidden>
+
+            <div class="file-info" id="fileInfo">
+                <span>📄</span>
+                <span class="file-name" id="fileName"></span>
+                <span class="file-remove" id="fileRemove" onclick="removeFile()">✕</span>
+            </div>
+
+            <button class="btn btn-primary" id="convertBtn" onclick="startConversion()" disabled>
+                <span>⚡</span> データを変換
+            </button>
+
+            <div class="progress-container" id="progressContainer">
+                <div class="progress-bar-track">
+                    <div class="progress-bar-fill" id="progressBarFill"></div>
+                </div>
+                <div class="progress-text" id="progressText">準備中...</div>
+            </div>
+
+            <div class="error-msg" id="errorMsg"></div>
+        </div>
+
+        <!-- Right: Output -->
+        <div class="card" id="outputCard">
+            <div class="card-title"><span class="icon">📋</span> 出力画面</div>
+
+            <div class="output-area" id="outputArea">変換されたCSVデータがここに表示されます</div>
+
+            <button class="btn btn-download" id="csvDownloadBtn" onclick="downloadCSV()" disabled>
+                <span>📥</span> 再度、CSVで出力
+            </button>
+
+            <button class="btn btn-json" id="jsonDownloadBtn" onclick="downloadJSON()" disabled>
+                <span>📥</span> 阪急JSON形式で出力
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+// ===== Particle Canvas =====
+(function() {
+    const canvas = document.getElementById('particleCanvas');
+    const ctx = canvas.getContext('2d');
+    let particles = [];
+    const PARTICLE_COUNT = 60;
+
+    function resize() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+    }
+    window.addEventListener('resize', resize);
+    resize();
+
+    function createParticle() {
+        return {
+            x: Math.random() * canvas.width,
+            y: Math.random() * canvas.height,
+            vx: (Math.random() - 0.5) * 0.4,
+            vy: (Math.random() - 0.5) * 0.4,
+            size: Math.random() * 2 + 0.5,
+            alpha: Math.random() * 0.4 + 0.1
+        };
+    }
+
+    for (let i = 0; i < PARTICLE_COUNT; i++) particles.push(createParticle());
+
+    function animate() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        for (let i = 0; i < particles.length; i++) {
+            const p = particles[i];
+            p.x += p.vx;
+            p.y += p.vy;
+
+            if (p.x < 0 || p.x > canvas.width) p.vx *= -1;
+            if (p.y < 0 || p.y > canvas.height) p.vy *= -1;
+
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+            ctx.fillStyle = `rgba(255, 215, 0, ${p.alpha})`;
+            ctx.fill();
+
+            // Draw connection lines
+            for (let j = i + 1; j < particles.length; j++) {
+                const p2 = particles[j];
+                const dx = p.x - p2.x;
+                const dy = p.y - p2.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                if (dist < 150) {
+                    ctx.beginPath();
+                    ctx.moveTo(p.x, p.y);
+                    ctx.lineTo(p2.x, p2.y);
+                    ctx.strokeStyle = `rgba(255, 215, 0, ${0.06 * (1 - dist / 150)})`;
+                    ctx.lineWidth = 0.5;
+                    ctx.stroke();
+                }
+            }
+        }
+        requestAnimationFrame(animate);
+    }
+    animate();
+})();
+
+// ===== App State =====
+let csvData = null;       // Parsed CSV rows (arrays)
+let convertedData = null; // After conversion
+
+const fileInput = document.getElementById('fileInput');
+const uploadArea = document.getElementById('uploadArea');
+const fileInfo = document.getElementById('fileInfo');
+const fileName = document.getElementById('fileName');
+const convertBtn = document.getElementById('convertBtn');
+const progressContainer = document.getElementById('progressContainer');
+const progressBarFill = document.getElementById('progressBarFill');
+const progressText = document.getElementById('progressText');
+const outputArea = document.getElementById('outputArea');
+const csvDownloadBtn = document.getElementById('csvDownloadBtn');
+const jsonDownloadBtn = document.getElementById('jsonDownloadBtn');
+const errorMsg = document.getElementById('errorMsg');
+
+// ===== Drag & Drop =====
+uploadArea.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    uploadArea.classList.add('drag-over');
+});
+uploadArea.addEventListener('dragleave', () => {
+    uploadArea.classList.remove('drag-over');
+});
+uploadArea.addEventListener('drop', (e) => {
+    e.preventDefault();
+    uploadArea.classList.remove('drag-over');
+    if (e.dataTransfer.files.length > 0) {
+        handleFile(e.dataTransfer.files[0]);
+    }
+});
+
+fileInput.addEventListener('change', (e) => {
+    if (e.target.files.length > 0) {
+        handleFile(e.target.files[0]);
+    }
+});
+
+function handleFile(file) {
+    if (!file.name.endsWith('.csv')) {
+        showError('CSVファイルを選択してください。');
+        return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            const uint8Array = new Uint8Array(e.target.result);
+            // Detect encoding and convert to Unicode
+            const detectedEncoding = Encoding.detect(uint8Array);
+            const unicodeArray = Encoding.convert(uint8Array, {
+                to: 'UNICODE',
+                from: detectedEncoding,
+                type: 'string'
+            });
+
+            csvData = parseCSV(unicodeArray);
+
+            fileName.textContent = `${file.name} (${csvData.length}行)`;
+            fileInfo.classList.add('visible');
+            uploadArea.style.display = 'none';
+            convertBtn.disabled = false;
+            hideError();
+        } catch (err) {
+            showError('CSVファイルの読み込みに失敗しました: ' + err.message);
+        }
+    };
+    reader.readAsArrayBuffer(file);
+}
+
+function removeFile() {
+    csvData = null;
+    convertedData = null;
+    fileInput.value = '';
+    fileInfo.classList.remove('visible');
+    uploadArea.style.display = '';
+    convertBtn.disabled = true;
+    csvDownloadBtn.disabled = true;
+    jsonDownloadBtn.disabled = true;
+    outputArea.textContent = '変換されたCSVデータがここに表示されます';
+    outputArea.classList.remove('has-data');
+    progressContainer.classList.remove('visible');
+    hideError();
+}
+
+// ===== CSV Parser (handles quoted fields) =====
+function parseCSV(text) {
+    const rows = [];
+    let current = '';
+    let inQuotes = false;
+    const row = [];
+
+    for (let i = 0; i < text.length; i++) {
+        const ch = text[i];
+        const next = text[i + 1];
+
+        if (inQuotes) {
+            if (ch === '"' && next === '"') {
+                current += '"';
+                i++;
+            } else if (ch === '"') {
+                inQuotes = false;
+            } else {
+                current += ch;
+            }
+        } else {
+            if (ch === '"') {
+                inQuotes = true;
+            } else if (ch === ',') {
+                row.push(current);
+                current = '';
+            } else if (ch === '\r' && next === '\n') {
+                row.push(current);
+                current = '';
+                rows.push([...row]);
+                row.length = 0;
+                i++;
+            } else if (ch === '\n') {
+                row.push(current);
+                current = '';
+                rows.push([...row]);
+                row.length = 0;
+            } else {
+                current += ch;
+            }
+        }
+    }
+    // Last row
+    if (current || row.length > 0) {
+        row.push(current);
+        rows.push([...row]);
+    }
+
+    return rows;
+}
+
+// ===== Conversion =====
+async function startConversion() {
+    if (!csvData || csvData.length < 2) {
+        showError('有効なCSVデータがありません（ヘッダー行 + データ行が必要です）。');
+        return;
+    }
+
+    hideError();
+    convertBtn.disabled = true;
+    csvDownloadBtn.disabled = true;
+    jsonDownloadBtn.disabled = true;
+    progressContainer.classList.add('visible');
+
+    // Deep copy the data
+    convertedData = csvData.map(row => [...row]);
+
+    // Add M and N headers (index 12, 13) to the header row
+    const header = convertedData[0];
+    while (header.length < 13) header.push('');
+    if (header.length < 14) header.push('');
+    header[12] = 'AI要約済_確認手配事項内容';
+    header[13] = 'AI要約済_後方メモ';
+
+    // Collect data rows with K and L columns (index 10, 11)
+    const dataRows = [];
+    for (let i = 1; i < convertedData.length; i++) {
+        const row = convertedData[i];
+        while (row.length < 14) row.push('');
+        const colK = (row[10] || '').trim();
+        const colL = (row[11] || '').trim();
+        if (colK || colL) {
+            dataRows.push({ rowIndex: i, colK, colL });
+        }
+    }
+
+    const totalRows = dataRows.length;
+    if (totalRows === 0) {
+        showError('K列・L列にデータがありません。');
+        convertBtn.disabled = false;
+        progressContainer.classList.remove('visible');
+        return;
+    }
+
+    let processedCount = 0;
+    updateProgress(processedCount, totalRows);
+
+    // Process in batches of 5
+    const BATCH_SIZE = 5;
+    for (let batchStart = 0; batchStart < dataRows.length; batchStart += BATCH_SIZE) {
+        const batch = dataRows.slice(batchStart, batchStart + BATCH_SIZE);
+
+        try {
+            const response = await fetch('convert.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    texts: batch.map(item => ({
+                        index: item.rowIndex,
+                        colK: item.colK,
+                        colL: item.colL
+                    }))
+                })
+            });
+
+            if (!response.ok) {
+                const errData = await response.json().catch(() => ({}));
+                throw new Error(errData.error || `HTTP ${response.status}`);
+            }
+
+            const result = await response.json();
+
+            for (const r of result.results) {
+                convertedData[r.index][12] = r.summaryK || '';
+                convertedData[r.index][13] = r.summaryL || '';
+            }
+
+            processedCount += batch.length;
+            updateProgress(processedCount, totalRows);
+
+        } catch (err) {
+            showError(`バッチ処理エラー: ${err.message}`);
+            // Continue with next batch instead of stopping
+            processedCount += batch.length;
+            updateProgress(processedCount, totalRows);
+        }
+    }
+
+    // Show results
+    displayOutput();
+    convertBtn.disabled = false;
+    csvDownloadBtn.disabled = false;
+    jsonDownloadBtn.disabled = false;
+
+    progressText.textContent = `✅ 完了 - ${totalRows}行中${totalRows}行処理完了 - 100%`;
+}
+
+function updateProgress(processed, total) {
+    const percent = Math.round((processed / total) * 100);
+    progressBarFill.style.width = percent + '%';
+    progressText.textContent = `${total}行中${processed}行処理完了 - ${percent}%`;
+}
+
+function displayOutput() {
+    if (!convertedData) return;
+
+    const csvText = convertedData.map(row =>
+        row.map(cell => {
+            const s = String(cell);
+            if (s.includes(',') || s.includes('"') || s.includes('\n')) {
+                return '"' + s.replace(/"/g, '""') + '"';
+            }
+            return s;
+        }).join(',')
+    ).join('\n');
+
+    outputArea.textContent = csvText;
+    outputArea.classList.add('has-data');
+}
+
+// ===== Downloads =====
+function downloadCSV() {
+    if (!convertedData) return;
+
+    const csvText = convertedData.map(row =>
+        row.map(cell => {
+            const s = String(cell);
+            if (s.includes(',') || s.includes('"') || s.includes('\n')) {
+                return '"' + s.replace(/"/g, '""') + '"';
+            }
+            return s;
+        }).join(',')
+    ).join('\r\n');
+
+    // Convert to Shift-JIS
+    const unicodeArray = Encoding.stringToCode(csvText);
+    const sjisArray = Encoding.convert(unicodeArray, {
+        to: 'SJIS',
+        from: 'UNICODE'
+    });
+    const uint8Array = new Uint8Array(sjisArray);
+    const blob = new Blob([uint8Array], { type: 'text/csv;charset=shift_jis' });
+
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'converted_' + new Date().toISOString().slice(0, 10) + '.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+}
+
+function downloadJSON() {
+    if (!convertedData || convertedData.length < 2) return;
+
+    const header = convertedData[0];
+    // Find column indices
+    const colInquiry = 0; // A列: 問合せ番号 (仮定)
+    const colK = 10;  // K列: 確認手配事項内容
+    const colL = 11;  // L列: 後方メモ
+    const colM = 12;  // M列: AI要約済_確認手配事項内容
+    const colN = 13;  // N列: AI要約済_後方メモ
+
+    const courses = [];
+    for (let i = 1; i < convertedData.length; i++) {
+        const row = convertedData[i];
+        courses.push({
+            "問合せ番号": row[colInquiry] || '',
+            "確認手配事項内容": row[colK] || '',
+            "後方メモ": row[colL] || '',
+            "AI要約済_確認手配事項内容": row[colM] || '',
+            "AI要約済_後方メモ": row[colN] || ''
+        });
+    }
+
+    const jsonData = JSON.stringify({ courses }, null, 2);
+    const blob = new Blob([jsonData], { type: 'application/json;charset=utf-8' });
+
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'hankyu_courses_' + new Date().toISOString().slice(0, 10) + '.json';
+    a.click();
+    URL.revokeObjectURL(url);
+}
+
+// ===== Error Handling =====
+function showError(msg) {
+    errorMsg.textContent = msg;
+    errorMsg.classList.add('visible');
+}
+
+function hideError() {
+    errorMsg.classList.remove('visible');
+}
+</script>
+
+</body>
+</html>
